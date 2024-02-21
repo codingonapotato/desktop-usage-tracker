@@ -6,8 +6,14 @@ using System.Diagnostics;
 public class Application
 {
     private static HashSet<string> _DefinedCategories = new HashSet<string>();
+    public static HashSet<string> DefinedCategories
+    {
+        get { return _DefinedCategories; }
+        set { _DefinedCategories = value; }
+    }
     private Process _Process;
     public bool Tracked = false;
+    private DateTime _StartTime;
     private DateTime StartTime { get; set; }
     private DateTime EndTime { get; set; }
     public string Category = string.Empty;
