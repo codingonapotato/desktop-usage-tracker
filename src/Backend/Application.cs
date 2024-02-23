@@ -12,11 +12,10 @@ public class Application
         set { _DefinedCategories = value; }
     }
     private Process _Process;
-    public bool Tracked = false;
-    private DateTime _StartTime;
-    private DateTime StartTime { get; set; }
-    private DateTime EndTime { get; set; }
-    public string Category = string.Empty;
+    public bool Tracked;
+    public DateTime StartTime;
+    public DateTime EndTime;
+    public string Category;
 
     /// <summary>
     /// Instantiates an application
@@ -25,6 +24,31 @@ public class Application
     public Application(Process process)
     {
         _Process = process;
+        Tracked = false;
+        StartTime = new DateTime();
+        Category = "Default";
+    }
+
+    /// <summary>
+    /// Determines whether the input category is valid
+    /// </summary>
+    /// <remarks>
+    /// Valid inputs must:
+    /// <list type="number">
+    /// <item>
+    /// Be between 1 and 50 characters (inclusive) in length
+    /// </item>
+    /// <item>
+    /// Not a string with only whitespace characters
+    /// </item>
+    /// </list>
+    /// </remarks>
+    /// <param name="category"></param>
+    /// <returns> bool </returns>
+    public static bool IsValidCategory(string category)
+    {
+        return 50 >= category.Length && category.Length > 0 &&
+        category.Replace(" ", "").Length != 0;
     }
 
     public static void AddCategory(string category)
@@ -32,17 +56,12 @@ public class Application
         return;   // stub
     }
 
-    public static void ModifyCategory(string category)
+    public static void ModifyCategory(string oldCategory, string newCategory)
     {
         return;   // stub
     }
 
     public static void RemoveCategory(string category)
-    {
-        return;   // stub
-    }
-
-    public static void IsValidCategory(string category)
     {
         return;   // stub
     }
