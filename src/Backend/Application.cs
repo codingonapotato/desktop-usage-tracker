@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq.Expressions;
 
 /// <summary>
 /// Class model for an application
@@ -51,11 +53,33 @@ public class Application
         category.Replace(" ", "").Length != 0;
     }
 
+    /// <summary>
+    /// Adds a new valid defined category for all Application instances to use 
+    /// </summary>
+    /// <param name="category"></param>
+    /// <exception cref="ArgumentException"></exception>
     public static void AddCategory(string category)
     {
-        return;   // stub
+        if (!IsValidCategory(category))
+        {
+            throw new ArgumentException("Category must be between 1 - 50 characters and cannot be all white-space characters");
+        }
+        else
+        {
+            _DefinedCategories.Add(category.ToLower());
+        }
+
     }
 
+    /// <summary>
+    /// Modifies an existing defined category for all Application instances  
+    /// </summary>
+    /// <remarks>
+    /// <param name="oldCategory"> must be defined and <param name="newCategory"> must be valid. Otherwise this function does nothing
+    /// </remarks>
+    /// <param name="oldCategory">Name referencing the category to change</param>
+    /// <param name="newCategory">New name to update the category to</param>
+    /// <exception cref="ArgumentException"></exception>
     public static void ModifyCategory(string oldCategory, string newCategory)
     {
         return;   // stub
