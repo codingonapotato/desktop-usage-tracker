@@ -3,7 +3,7 @@ using System.Reflection.Metadata.Ecma335;
 public class Category
 {
     public string Name;
-    private static Dictionary<string, Category> _DefinedCategories = new Dictionary<string, Category>();
+    private static Dictionary<string, Category> _DefinedCategories = new Dictionary<string, Category>();    // strictly lower-case alphanumerical strings as keys only
     public static Dictionary<string, Category> DefinedCategories
     {
         get { return _DefinedCategories; }
@@ -29,7 +29,6 @@ public class Category
         }
         else
         {
-            Name = DEFAULT_NAME;
             throw new ArgumentException(_INVALID_ARGUMENT_MESSAGE);
         }
     }
@@ -44,12 +43,12 @@ public class Category
     {
         Category? categoryInstance;
         name = name.ToLower();
-        
-        if (!_DefinedCategories.TryGetValue(name, out categoryInstance)) 
+
+        if (!_DefinedCategories.TryGetValue(name, out categoryInstance))
         {
             categoryInstance = new Category(name);
             _DefinedCategories.Add(name, categoryInstance);
-        } 
+        }
         return categoryInstance;
     }
 
@@ -83,11 +82,11 @@ public class Category
     {
         name = name.ToLower();
         {
-            if (!_DefinedCategories.ContainsKey(name)) 
+            if (!_DefinedCategories.ContainsKey(name))
             {
                 Category categoryInstance = new Category(name);
                 _DefinedCategories.Add(name, categoryInstance);
-            } 
+            }
         }
 
     }
@@ -103,7 +102,7 @@ public class Category
         oldCategory = oldCategory.ToLower();
         newCategory = newCategory.ToLower();
 
-        if (!_DefinedCategories.ContainsKey(oldCategory)) 
+        if (!_DefinedCategories.ContainsKey(oldCategory))
         {
             throw new ArgumentException("Category to modify does not exist");
         }
@@ -125,12 +124,12 @@ public class Category
     public static void RemoveCategory(string name)
     {
         name = name.ToLower();
-        
-        if (!_DefinedCategories.ContainsKey(name)) 
+
+        if (!_DefinedCategories.ContainsKey(name))
         {
             throw new ArgumentException("Could not find the category requested to be removed");
         }
-        else 
+        else
         {
             _DefinedCategories.Remove(name);
         }
