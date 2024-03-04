@@ -1,5 +1,4 @@
-using System.Reflection.Metadata.Ecma335;
-
+namespace Backend;
 public class Category
 {
     public string Name;
@@ -16,8 +15,7 @@ public class Category
     /// Instantiates a new category instance with the specified name
     /// </summary>
     /// <remarks>
-    /// Requires that the specified name is a valid name. Otherwise will set to "Uncategorized" and throw an ArgumentException.
-    /// If a category instance with the same name already exists, the constructor will return the existing object instance
+    /// Requires: name is a valid category name. Otherwise, throw an ArgumentException
     /// </remarks>
     /// <param name="name"></param>
     /// <exception cref="ArgumentException"></exception>
@@ -34,11 +32,11 @@ public class Category
     }
 
     /// <summary>
-    /// Returns a reference the Category instance with the specified <param name="name">name</param>.
+    /// Returns a reference the Category instance with the specified <param name="name">name</param>
     /// Otherwise, returns a new Category instance
     /// </summary>
     /// <param name="name"></param>
-    /// <returns></returns>
+    /// <returns> Category </returns>
     public static Category GetInstance(string name)
     {
         Category? categoryInstance;

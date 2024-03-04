@@ -1,5 +1,5 @@
 namespace BackendTests;
-
+using Backend;
 using NUnit.Framework.Internal;
 
 public class CategoryTests
@@ -8,6 +8,34 @@ public class CategoryTests
     public void Setup()
     {
         Category.DefinedCategories.Clear();
+    }
+
+    [TestFixture]
+    class CategoryConstructorTests
+    {
+        [TestCase("ONqGYtCt09BxfVJmZqO8ptBEKvUrTn0mSs0s0vXz7hkNYPqsrR")]    // 50 characters case
+        [TestCase("R")]    // 1 character case
+        [TestCase("Productivity")]    // General case
+        public void ValidCategory(string category)
+        {
+            Category categoryInstance = new Category(category);
+            Assert.True(categoryInstance.Name == category.ToLower());
+        }
+
+        [TestCase("")]    // 0 character case
+        [TestCase("ONqGYtCt09BxfVJmZqO8ptBEKvUrTn0mSs0s0vXz7hkNYPqsrR1")]    // 51 characters case
+        public void InvalidCategory(string category)
+        {
+            try
+            {
+                Category categoryInstance = new Category(category);
+                Assert.Fail();
+            }
+            catch (ArgumentException)
+            {
+                // pass
+            }
+        }
     }
 
     [TestFixture]
