@@ -106,6 +106,10 @@ public class Category
         {
             throw new ArgumentException("Category to modify does not exist");
         }
+        else if (!IsValidName(newCategory))
+        {
+            throw new ArgumentException(_INVALID_ARGUMENT_MESSAGE);
+        }
         else
         {
             Category categoryInstance = _DefinedCategories[oldCategory];
