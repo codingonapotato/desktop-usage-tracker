@@ -6,7 +6,8 @@ using System.Diagnostics;
 /// </summary>
 public class Application
 {
-    private Process _Process;
+    private Process? _Process;
+    public string Name;
     public bool Tracked;
     public DateTime StartTime;
     public DateTime EndTime;
@@ -16,10 +17,11 @@ public class Application
     /// <summary>
     /// Instantiates an application
     /// </summary>
-    /// <param name="process"> Process component with a process id corresponding to the parent process for a running executable </param>
-    public Application(Process process)
+    /// <param name="name"> Name of a running executable </param>
+    public Application(string name)
     {
-        _Process = process;
+        Name = name;
+        _Process = null;
         Tracked = false;
         StartTime = DateTime.Now;
         Elapsed = TimeSpan.Zero;
@@ -27,11 +29,36 @@ public class Application
     }
 
     /// <summary>
+    /// Attempt to retrieve the parent process for a running executable with the specified name and returns true. 
+    /// Returns false if no such process exists.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public static bool TryGetParentProcess(string name, out Process? parentProcess)
+    {
+        Process[] processes = Process.GetProcessesByName(name);
+        if (processes.Length == 0)
+        {
+            parentProcess = null;
+            return false;
+        }
+
+        else
+        {
+            string query = string.Format("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {0}", processes[0]);
+            ManagementObjectSearcher
+        }
+    }
+
+    /// <summary>
     /// Returns whether the application instance is associated with a running process
     /// </summary>
+    /// <remarks> If the application is not running (not associated with a process) this function will return false </remarks>
     /// <returns> bool </returns>
     public bool IsApplicationRunning()
     {
+        if (_Process is null)
+            return false;
         _Process.Refresh();
         return _Process.HasExited;
     }
