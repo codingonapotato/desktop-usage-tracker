@@ -1,5 +1,8 @@
 namespace Backend;
+
+using System.CodeDom.Compiler;
 using System.Diagnostics;
+using System.Management;
 
 /// <summary>
 /// Class model for an application
@@ -46,7 +49,8 @@ public class Application
         else
         {
             string query = string.Format("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {0}", processes[0]);
-            ManagementObjectSearcher
+            ManagementObjectSearcher managementObjectSearcher = new ManagementObjectSearcher(query);
+            var results = managementObjectSearcher.Get();
         }
     }
 
