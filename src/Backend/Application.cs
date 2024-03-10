@@ -1,8 +1,9 @@
 namespace Backend;
 
-using System.CodeDom.Compiler;
+using System.Collections;
 using System.Diagnostics;
 using System.Management;
+using System.Runtime.Versioning;
 
 /// <summary>
 /// Class model for an application
@@ -37,6 +38,7 @@ public class Application
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
+    [SupportedOSPlatform("windows")]
     public static bool TryGetParentProcess(string name, out Process? parentProcess)
     {
         Process[] processes = Process.GetProcessesByName(name);
@@ -45,12 +47,37 @@ public class Application
             parentProcess = null;
             return false;
         }
+        else if (processes.Length == 1)    // Case where only parent process exists
+        {
+            parentProcess = processes[0];
+            return true;
+        }
 
         else
         {
-            string query = string.Format("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {0}", processes[0]);
-            ManagementObjectSearcher managementObjectSearcher = new ManagementObjectSearcher(query);
-            var results = managementObjectSearcher.Get();
+            // Query WMI to get the ParentProcessId for 2 processes
+            (int processId, uint parentProcessId)[] parentProcessIds = new (int, uint)[2];
+            for (int i = 0; i < 2; i++)
+            {
+                string query = string.Format("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {0}", processes[i].Id);
+                ManagementObjectSearcher managementObjectSearcher = new ManagementObjectSearcher(query);
+                ManagementObjectCollection results = managementObjectSearcher.Get();
+                ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator();
+                enumerator.MoveNext();
+                parentProcessIds[i] = (processes[i].Id, (uint)enumerator.Current["ParentProcessId"]);
+            }
+
+            // Find the true parent process id. Assumes that processes with the same name cannot have different parent processes
+            if (parentProcessIds[0].parentProcessId == parentProcessIds[1].parentProcessId)    // Case 1: Both proccesses have the same parent
+                parentProcess = Process.GetProcessById((int)parentProcessIds[0].parentProcessId);
+            else
+            {
+                if (parentProcessIds[0].parentProcessId == parentProcessIds[1].processId)   // Case 2: Process 1 is process 0's parent
+                    parentProcess = Process.GetProcessById((int)parentProcessIds[0].parentProcessId);
+                else
+                    parentProcess = Process.GetProcessById((int)parentProcessIds[1].parentProcessId);    // Case 3: Process 0 is process 1's parent
+            }
+            return true;
         }
     }
 

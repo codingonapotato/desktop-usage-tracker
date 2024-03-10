@@ -33,7 +33,7 @@ public class CategoryTests
             }
             catch (ArgumentException)
             {
-                // pass
+                Assert.Pass();    // pass
             }
         }
     }
