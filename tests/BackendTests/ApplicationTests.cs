@@ -1,18 +1,14 @@
 namespace BackendTests;
 
 using System.Diagnostics;
+using System.Threading;
 using System.Runtime.Versioning;
 using Backend;
 using NUnit.Framework.Internal;
 
+[SupportedOSPlatform("windows")]
 public class ApplicationTests
 {
-    // [SetUp]
-    // public void Setup()
-    // {
-    //     return;    //stub
-    // }
-
     [TestFixture]
     class TryGetParentProcessTests : ApplicationTests
     {
@@ -20,7 +16,6 @@ public class ApplicationTests
         /// Precondition: An instance of the process being tested MUST be running before running this test case
         /// </summary>
         [Test]
-        [SupportedOSPlatform("windows")]
         public void ProcessFound()
         {
             Process? parentProcess;
@@ -32,7 +27,6 @@ public class ApplicationTests
         }
 
         [Test]
-        [SupportedOSPlatform("windows")]
         public void ProcessNotFound()
         {
             Process? parentProcess;
@@ -47,13 +41,85 @@ public class ApplicationTests
         /// <summary>
         /// Precondition: An instance of the process being tested MUST be running before running this test case
         /// </summary>
-        [Test]
-        public void TestConstructorFields()
+        [TestCase("chrome", "Google Chrome")]
+        public void TestConstructorFields(string name, string productName)
         {
-            Application applicationInstance = new Application("chrome");
-            //TODO: Check fields
+            Application applicationInstance = new Application(name);
 
+            // Check Name field
+            Assert.True(applicationInstance.Name == productName);
+            // Check Process field
+            if (applicationInstance.Process == null)
+                Assert.Fail("Expected to have a Process object instance here. Perhaps the pre-condition for the test case has not been satisfied?");
+            else
+                Assert.True(applicationInstance.Process.ProcessName.ToLower() == "chrome");
+            // Check Tracked field
+            Assert.False(applicationInstance.Tracked);
+            // Check EndTime field
+            Assert.True(applicationInstance.EndTime == DateTime.MinValue);
+            // Check Elapsed field
+            Assert.True(applicationInstance.Elapsed == TimeSpan.Zero);
+            // Check Category field
+            Assert.True(applicationInstance.Category == Category.GetInstance(Category.DEFAULT_NAME));
+        }
+    }
 
+    [TestFixture]
+    class IsApplicationRunningTests
+    {
+        /// <summary>
+        /// Pre-condition: 
+        ///  No instance of Window's setting is running before executing this test </item>
+        /// </summary>
+        [Test]
+        public void ApplicationIsRunning()
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo(@"C:\Windows\ImmersiveControlPanel\SystemSettings.exe");
+            Process? edge = Process.Start(startInfo);
+            if (edge is null)
+                Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
+            else
+            {
+                Application applicationInstance = new Application("SystemSettings");
+                Assert.True(applicationInstance.IsApplicationRunning());
+
+                edge.Kill();
+                edge.WaitForExit();
+                edge.Close();
+                Assert.False(applicationInstance.IsApplicationRunning());
+            }
+        }
+    }
+
+    [TestFixture]
+    class CalculateTimeElapsedTests
+    {
+        /// <summary>
+        /// Pre-condition: 
+        ///  No instance of Window's setting is running before executing this test </item>
+        /// </summary>
+        [Test]
+        public void TimeElapsedForRunningApplication()
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo(@"C:\Windows\ImmersiveControlPanel\SystemSettings.exe");
+            Process? edge = Process.Start(startInfo);
+            if (edge is null)
+                Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
+            else
+            {
+                Application applicationInstance = new Application("SystemSettings") { Tracked = true };
+                Console.WriteLine(applicationInstance.CalculateTimeElapsed());
+                TimeSpan firstElapsed = applicationInstance.CalculateTimeElapsed();
+                Thread.Sleep(1000);
+                TimeSpan secondElapsed = applicationInstance.CalculateTimeElapsed();
+
+                Assert.True(secondElapsed.CompareTo(firstElapsed) > 0);
+            }
+        }
+
+        [Test]
+        public void TimeElapsedForExitedApplication()
+        {
 
         }
     }

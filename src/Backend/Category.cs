@@ -6,7 +6,6 @@ public class Category
     public static Dictionary<string, Category> DefinedCategories
     {
         get { return _DefinedCategories; }
-        set { _DefinedCategories = value; }
     }
     public const string DEFAULT_NAME = "uncategorized";
     private const string _INVALID_ARGUMENT_MESSAGE = "Category must be between 1 - 50 characters and cannot be all white-space characters";

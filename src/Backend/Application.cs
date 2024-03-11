@@ -1,6 +1,5 @@
 namespace Backend;
 
-using System.Collections;
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.Versioning;
@@ -8,9 +7,10 @@ using System.Runtime.Versioning;
 /// <summary>
 /// Class model for an application
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class Application
 {
-    private Process? _Process;
+    public Process? Process;
     public string Name;
     public bool Tracked;
     public DateTime StartTime;
@@ -21,13 +21,17 @@ public class Application
     /// <summary>
     /// Instantiates an application
     /// </summary>
+    /// <remarks>
+    /// Pre-condition: "name" parameter must correspond to the name of a running process
+    /// </remarks>
     /// <param name="name"> Name of a running executable </param>
     public Application(string name)
     {
-        Name = name;
-        _Process = null;
+        TryGetParentProcess(name, out Process);
+        Name = GetProductName(Process);
         Tracked = false;
         StartTime = DateTime.Now;
+        EndTime = DateTime.MinValue;
         Elapsed = TimeSpan.Zero;
         Category = Category.GetInstance(Category.DEFAULT_NAME);
     }
@@ -38,7 +42,6 @@ public class Application
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
-    [SupportedOSPlatform("windows")]
     public static bool TryGetParentProcess(string name, out Process? parentProcess)
     {
         Process[] processes = Process.GetProcessesByName(name);
@@ -88,31 +91,20 @@ public class Application
     /// <returns> bool </returns>
     public bool IsApplicationRunning()
     {
-        if (_Process is null)
+        if (Process is null)
             return false;
-        _Process.Refresh();
-        return _Process.HasExited;
-    }
-
-    /// <summary>
-    /// Returns the process id for a running application
-    /// </summary>
-    /// <returns></returns>
-    public int GetProcessId()
-    {
-        return _Process.Id;
+        Process.Refresh();
+        return !Process.HasExited;
     }
 
     /// <summary>
     /// Calculates the amount of time elapsed for the application so far
     /// </summary>
-    /// <remarks> Requires: endTime is always chronologically later than Application.StartTime </remarks>
-    /// <param name="endTime"></param>
     /// <returns> TimeSpan object containing the time elapsed </returns>
-    public TimeSpan CalculateTimeElapsed(DateTime endTime)
+    public TimeSpan CalculateTimeElapsed()
     {
         if (Tracked)
-            return endTime.Subtract(StartTime);
+            return DateTime.Now.Subtract(StartTime);
         else
             return EndTime.Subtract(StartTime);
     }
@@ -128,5 +120,29 @@ public class Application
     public void ModifyCategory(string name)
     {
         Category = Category.GetInstance(name);
+    }
+
+    /// <summary>
+    /// Retrieves the product name of a process
+    /// </summary>
+    /// <param name="process"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    private static string GetProductName(Process? process)
+    {
+        if (process is null)
+            throw new ArgumentException("Expected an instance of the Process class");
+        else
+        {
+            string defaultName = process.ProcessName;     // Use the process name as a default
+            if (process.MainModule is null)
+                return defaultName;
+            else
+            {
+                string fileName = process.MainModule.FileName;
+                FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(fileName);
+                return fileVersionInfo.ProductName ?? defaultName;
+            }
+        }
     }
 }
