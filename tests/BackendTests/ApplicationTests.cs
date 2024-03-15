@@ -99,7 +99,7 @@ public class ApplicationTests
         ///  No instance of Window's setting is running before executing this test </item>
         /// </summary>
         [Test]
-        public void TimeElapsedForRunningApplication()
+        public void SimpleTimeElapsedForRunningApplication()
         {
             ProcessStartInfo startInfo = new ProcessStartInfo(@"C:\Windows\ImmersiveControlPanel\SystemSettings.exe");
             Process? edge = Process.Start(startInfo);
@@ -108,7 +108,6 @@ public class ApplicationTests
             else
             {
                 Application applicationInstance = new Application("SystemSettings") { Tracked = true };
-                Console.WriteLine(applicationInstance.CalculateTimeElapsed());
                 TimeSpan firstElapsed = applicationInstance.CalculateTimeElapsed();
                 Thread.Sleep(1000);
                 TimeSpan secondElapsed = applicationInstance.CalculateTimeElapsed();
@@ -117,10 +116,35 @@ public class ApplicationTests
             }
         }
 
+        /// <summary>
+        /// Pre-condition: 
+        ///  No instance of Window's setting is running before executing this test </item>
+        /// </summary>
         [Test]
-        public void TimeElapsedForExitedApplication()
+        public void SimpleTimeElapsedForExitedApplication()
         {
+            ProcessStartInfo startInfo = new ProcessStartInfo(@"C:\Windows\ImmersiveControlPanel\SystemSettings.exe");
+            Process? edge = Process.Start(startInfo);
+            if (edge is null)
+                Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
+            else
+            {
+                Application applicationInstance = new Application("SystemSettings") { Tracked = true };
 
+                edge.Kill();
+                edge.WaitForExit();
+                edge.Close();
+
+                TimeSpan timeElapsedBeforeSleep = applicationInstance.CalculateTimeElapsed();
+                Assert.True(timeElapsedBeforeSleep.CompareTo(applicationInstance.Elapsed))
+                Assert.True(applicationInstance.EndTime != DateTime.MinValue);    // check end-time is set
+                Thread.Sleep(1000);
+                TimeSpan timeElapsedAfterSleep = applicationInstance.CalculateTimeElapsed();
+                Assert.True(timeElapsedAfterSleep.CompareTo(timeElapsedBeforeSleep) == 0);    // check that time elapsed after 1-second has not increased
+            }
         }
+
+        [Test]
+
     }
 }

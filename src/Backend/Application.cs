@@ -12,7 +12,7 @@ public class Application
 {
     public Process? Process;
     public string Name;
-    public bool Tracked;
+    public bool Tracked; // TODO - Setter for this needs to be more complicated... If set to False, need to also set the EndTime field to current time. Otherwise, set the StartTime to current time
     public DateTime StartTime;
     public DateTime EndTime;
     public TimeSpan Elapsed;
@@ -98,15 +98,28 @@ public class Application
     }
 
     /// <summary>
-    /// Calculates the amount of time elapsed for the application so far
+    /// Calculates the amount of time elapsed for the application so far and updates the Elapsed field
     /// </summary>
     /// <returns> TimeSpan object containing the time elapsed </returns>
     public TimeSpan CalculateTimeElapsed()
     {
+        /*TODO - Incomplete 
+          Full requirements:
+            - If the application is being tracked, method should:
+                1. Calculate the difference between the start and current time 
+                2. Add that to the elapsed time
+                3. Set the current time as the new "start" time
+            - Otherwise:
+                1. Return the elapsed time. (Setter for tracker will be responsible for the correct time-elapsed calculation)
+          */
         if (Tracked)
-            return DateTime.Now.Subtract(StartTime);
-        else
-            return EndTime.Subtract(StartTime);
+        {
+            TimeSpan currentTimeElapsed = DateTime.Now.Subtract(StartTime);
+            Elapsed = Elapsed.Add(currentTimeElapsed);
+            StartTime = DateTime.Now;
+        }
+
+        return Elapsed;
     }
 
     /// <summary>
