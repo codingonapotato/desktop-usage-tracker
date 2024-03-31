@@ -12,9 +12,13 @@ public class Application
 {
     public Process? Process;
     public string Name;
-    public bool Tracked; // TODO - Setter for this needs to be more complicated... If set to False, need to also set the EndTime field to current time. Otherwise, set the StartTime to current time
-    public DateTime StartTime;
-    public DateTime EndTime;
+    private bool _Tracked;
+    public bool Tracked
+    {
+        get { return _Tracked; }
+    }
+    // TODO - Setter for this needs to be more complicated... If set to False, need to also set the EndTime field to current time. Otherwise, set the StartTime to current time
+    public DateTime ReferenceTime;
     public TimeSpan Elapsed;
     public Category Category;
 
@@ -29,9 +33,8 @@ public class Application
     {
         TryGetParentProcess(name, out Process);
         Name = GetProductName(Process);
-        Tracked = false;
-        StartTime = DateTime.Now;
-        EndTime = DateTime.MinValue;
+        _Tracked = false;
+        ReferenceTime = DateTime.Now;
         Elapsed = TimeSpan.Zero;
         Category = Category.GetInstance(Category.DEFAULT_NAME);
     }
@@ -85,6 +88,17 @@ public class Application
     }
 
     /// <summary>
+    /// Set the value of the tracked field to the specified state and made necessary modifications to Application interal state
+    /// </summary>
+    /// <param name="state"></param>
+    public void SetTracked(bool state)
+    {
+        if (state)
+            ReferenceTime = DateTime.Now;
+        _Tracked = state;
+    }
+
+    /// <summary>
     /// Returns whether the application instance is associated with a running process
     /// </summary>
     /// <remarks> If the application is not running (not associated with a process) this function will return false </remarks>
@@ -98,25 +112,16 @@ public class Application
     }
 
     /// <summary>
-    /// Calculates the amount of time elapsed for the application so far and updates the Elapsed field
+    /// Calculates the amount of time elapsed for the application so far and updates the Elapsed field if the application is still running
     /// </summary>
     /// <returns> TimeSpan object containing the time elapsed </returns>
     public TimeSpan CalculateTimeElapsed()
     {
-        /*TODO - Incomplete 
-          Full requirements:
-            - If the application is being tracked, method should:
-                1. Calculate the difference between the start and current time 
-                2. Add that to the elapsed time
-                3. Set the current time as the new "start" time
-            - Otherwise:
-                1. Return the elapsed time. (Setter for tracker will be responsible for the correct time-elapsed calculation)
-          */
-        if (Tracked)
+        if (Tracked && IsApplicationRunning())
         {
-            TimeSpan currentTimeElapsed = DateTime.Now.Subtract(StartTime);
+            TimeSpan currentTimeElapsed = DateTime.Now.Subtract(ReferenceTime);
             Elapsed = Elapsed.Add(currentTimeElapsed);
-            StartTime = DateTime.Now;
+            ReferenceTime = DateTime.Now;
         }
 
         return Elapsed;
