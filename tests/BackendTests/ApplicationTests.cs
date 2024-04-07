@@ -9,8 +9,17 @@ using NUnit.Framework.Internal;
 [SupportedOSPlatform("windows")]
 public class ApplicationTests
 {
+    ProcessStartInfo startInfo = new ProcessStartInfo(@"..\..\..\iperf-3.1.3-win64\iperf3.exe", "-s");
+    string processName = "iperf3";
+    public void cleanUpProcessRoutine(Process process)
+    {
+        process.Kill();
+        process.WaitForExit();
+        process.Close();
+    }
+
     [TestFixture]
-    class TryGetParentProcessTests : ApplicationTests
+    class TryGetParentProcessTests
     {
         /// <summary>
         /// Precondition: An instance of the process being tested MUST be running before running this test case
@@ -19,18 +28,21 @@ public class ApplicationTests
         public void ProcessFound()
         {
             Process? parentProcess;
-            Assert.True(Application.TryGetParentProcess("chrome", out parentProcess));
+            Assert.True(Application.TryGetMainProcess("chrome", out parentProcess));
             if (parentProcess == null)
                 Assert.Fail("Expected to have a Process object instance here. Perhaps the pre-condition for the test case has not been satisfied?");
             else
                 Assert.True(parentProcess.ProcessName.ToLower() == "chrome");
         }
 
+        /// <summary>
+        /// Precondition: An instance of the process being tested MUST NOT be running before running this test case
+        /// </summary>
         [Test]
         public void ProcessNotFound()
         {
             Process? parentProcess;
-            Assert.False(Application.TryGetParentProcess("not a real process name", out parentProcess));
+            Assert.False(Application.TryGetMainProcess("not a real process name", out parentProcess));
             Assert.True(parentProcess == null);
         }
     }
@@ -55,8 +67,6 @@ public class ApplicationTests
                 Assert.True(applicationInstance.Process.ProcessName.ToLower() == "chrome");
             // Check Tracked field
             Assert.False(applicationInstance.Tracked);
-            // Check EndTime field
-            Assert.True(applicationInstance.EndTime == DateTime.MinValue);
             // Check Elapsed field
             Assert.True(applicationInstance.Elapsed == TimeSpan.Zero);
             // Check Category field
@@ -65,52 +75,52 @@ public class ApplicationTests
     }
 
     [TestFixture]
-    class IsApplicationRunningTests
+    class IsApplicationRunningTests : ApplicationTests
     {
         /// <summary>
         /// Pre-condition: 
-        ///  No instance of Window's setting is running before executing this test </item>
+        ///  No instance of iperf3 is running before executing this test </item>
         /// </summary>
         [Test]
         public void ApplicationIsRunning()
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo(@"C:\Windows\ImmersiveControlPanel\SystemSettings.exe");
-            Process? edge = Process.Start(startInfo);
-            if (edge is null)
+            Process? process = Process.Start(startInfo);
+            if (process is null)
                 Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
             else
             {
-                Application applicationInstance = new Application("SystemSettings");
+                Application applicationInstance = new Application(processName);
                 Assert.True(applicationInstance.IsApplicationRunning());
 
-                edge.Kill();
-                edge.WaitForExit();
-                edge.Close();
+                cleanUpProcessRoutine(process);
+
                 Assert.False(applicationInstance.IsApplicationRunning());
             }
         }
     }
 
     [TestFixture]
-    class CalculateTimeElapsedTests
+    class CalculateTimeElapsedTests : ApplicationTests
     {
         /// <summary>
         /// Pre-condition: 
-        ///  No instance of Window's setting is running before executing this test </item>
+        ///  No instance of Window's iperf3 is running before executing this test </item>
         /// </summary>
         [Test]
         public void SimpleTimeElapsedForRunningApplication()
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo(@"C:\Windows\ImmersiveControlPanel\SystemSettings.exe");
-            Process? edge = Process.Start(startInfo);
-            if (edge is null)
+            Process? process = Process.Start(startInfo);
+            if (process is null)
                 Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
             else
             {
-                Application applicationInstance = new Application("SystemSettings") { Tracked = true };
+                Application applicationInstance = new Application(processName);
+                applicationInstance.SetTracked(true);
                 TimeSpan firstElapsed = applicationInstance.CalculateTimeElapsed();
                 Thread.Sleep(1000);
                 TimeSpan secondElapsed = applicationInstance.CalculateTimeElapsed();
+
+                cleanUpProcessRoutine(process);
 
                 Assert.True(secondElapsed.CompareTo(firstElapsed) > 0);
             }
@@ -118,33 +128,55 @@ public class ApplicationTests
 
         /// <summary>
         /// Pre-condition: 
-        ///  No instance of Window's setting is running before executing this test </item>
+        /// No instance of Window's iperf3 is running before executing this test </item>
         /// </summary>
         [Test]
         public void SimpleTimeElapsedForExitedApplication()
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo(@"C:\Windows\ImmersiveControlPanel\SystemSettings.exe");
-            Process? edge = Process.Start(startInfo);
-            if (edge is null)
+            Process? process = Process.Start(startInfo);
+            if (process is null)
                 Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
             else
             {
-                Application applicationInstance = new Application("SystemSettings") { Tracked = true };
+                Application applicationInstance = new Application(processName);
+                applicationInstance.SetTracked(true);
 
-                edge.Kill();
-                edge.WaitForExit();
-                edge.Close();
+                cleanUpProcessRoutine(process);
 
                 TimeSpan timeElapsedBeforeSleep = applicationInstance.CalculateTimeElapsed();
-                Assert.True(timeElapsedBeforeSleep.CompareTo(applicationInstance.Elapsed))
-                Assert.True(applicationInstance.EndTime != DateTime.MinValue);    // check end-time is set
                 Thread.Sleep(1000);
                 TimeSpan timeElapsedAfterSleep = applicationInstance.CalculateTimeElapsed();
-                Assert.True(timeElapsedAfterSleep.CompareTo(timeElapsedBeforeSleep) == 0);    // check that time elapsed after 1-second has not increased
+                Assert.True(timeElapsedAfterSleep.CompareTo(timeElapsedBeforeSleep) == 0);    // check that time elapsed after 1-second sleep has not increased
             }
         }
 
+        /// <summary>
+        /// Pre-condition: 
+        /// No instance of Window's iperf3 is running before executing this test </item>
+        /// </summary>
         [Test]
+        public void TimeElapsedForDynamicallyTrackedAppliation()
+        {
+            Process? process = Process.Start(startInfo);
+            if (process is null)
+                Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
+            else
+            {
+                Application applicationInstance = new Application(processName);
+                applicationInstance.SetTracked(true);
+                Thread.Sleep(1000);    //  1-second passes while application is tracked
+                applicationInstance.SetTracked(false);
+                TimeSpan timeElapsedTracked = applicationInstance.CalculateTimeElapsed();
+                Thread.Sleep(1000);    //  1-second passes while application is un-tracked
+                applicationInstance.SetTracked(true);
+                Thread.Sleep(1000);    //  1-second passes while application is tracked
+                TimeSpan timeElapsedRetracked = applicationInstance.CalculateTimeElapsed();
+
+                Assert.True(timeElapsedTracked.CompareTo(timeElapsedRetracked) < 0);    // Check that time elapsed of re-tracked application is greater
+
+                cleanUpProcessRoutine(process);
+            }
+        }
 
     }
 }

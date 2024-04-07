@@ -1,5 +1,6 @@
 namespace Backend;
 
+using System.Collections;
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.Versioning;
@@ -17,7 +18,6 @@ public class Application
     {
         get { return _Tracked; }
     }
-    // TODO - Setter for this needs to be more complicated... If set to False, need to also set the EndTime field to current time. Otherwise, set the StartTime to current time
     public DateTime ReferenceTime;
     public TimeSpan Elapsed;
     public Category Category;
@@ -31,7 +31,7 @@ public class Application
     /// <param name="name"> Name of a running executable </param>
     public Application(string name)
     {
-        TryGetParentProcess(name, out Process);
+        TryGetMainProcess(name, out Process);
         Name = GetProductName(Process);
         _Tracked = false;
         ReferenceTime = DateTime.Now;
@@ -40,51 +40,59 @@ public class Application
     }
 
     /// <summary>
-    /// Attempt to retrieve the parent process for a running executable with the specified name and returns true. 
+    /// Attempt to retrieve the main process for a running executable with the specified name and returns true. 
     /// Returns false if no such process exists.
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
-    public static bool TryGetParentProcess(string name, out Process? parentProcess)
+    public static bool TryGetMainProcess(string name, out Process? mainProcess)
     {
         Process[] processes = Process.GetProcessesByName(name);
         if (processes.Length == 0)
-        {
-            parentProcess = null;
-            return false;
-        }
-        else if (processes.Length == 1)    // Case where only parent process exists
-        {
-            parentProcess = processes[0];
-            return true;
-        }
-
+            mainProcess = null;
+        else if (processes.Length == 1)    // Case where only the main process exists
+            mainProcess = processes[0];
         else
         {
-            // Query WMI to get the ParentProcessId for 2 processes
-            (int processId, uint parentProcessId)[] parentProcessIds = new (int, uint)[2];
-            for (int i = 0; i < 2; i++)
+            // Query ProcessId, CreationDate, and ExecutablePath from WMI with the matching executable name and add them to ArrayList
+            ArrayList processList = new ArrayList();
+            string query = string.Format("SELECT ProcessId, ExecutablePath, CreationDate FROM Win32_Process WHERE Name = '{0}.exe'", name);
+            ManagementObjectSearcher managementObjectSearcher = new ManagementObjectSearcher(query);
+            ManagementObjectCollection results = managementObjectSearcher.Get();
+            ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator();
+            while (enumerator.MoveNext())
+                processList.Add(((uint)enumerator.Current["ProcessId"], (string)enumerator.Current["ExecutablePath"], (string)enumerator.Current["CreationDate"]));
+
+            // Find the process with the earliest creation time and a non-null executable path which will be the id of the main process
+            uint earliestProcessId = 0;
+            DateTime earliestCreationDate = DateTime.MaxValue;
+            foreach (ValueTuple<uint, string, string> processTuple in processList)
             {
-                string query = string.Format("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {0}", processes[i].Id);
-                ManagementObjectSearcher managementObjectSearcher = new ManagementObjectSearcher(query);
-                ManagementObjectCollection results = managementObjectSearcher.Get();
-                ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator();
-                enumerator.MoveNext();
-                parentProcessIds[i] = (processes[i].Id, (uint)enumerator.Current["ParentProcessId"]);
+                string processExecutablePath = processTuple.Item2;
+                if (processExecutablePath == string.Empty)
+                    continue;
+                string creationDate = processTuple.Item3;    // Example: 20240331142353.658251
+                int year = int.Parse(creationDate.Substring(0, 4));
+                int month = int.Parse(creationDate.Substring(4, 2));
+                int day = int.Parse(creationDate.Substring(6, 2));
+                int hour = int.Parse(creationDate.Substring(8, 2));
+                int minutes = int.Parse(creationDate.Substring(10, 2));
+                int seconds = int.Parse(creationDate.Substring(12, 2));
+                int milliseconds = int.Parse(creationDate.Substring(15, 3));
+                int microseconds = int.Parse(creationDate.Substring(18, 3));
+
+                DateTime processCreationDateTime = new DateTime(year, month, day, hour, minutes, seconds, milliseconds, microseconds);
+
+                if (processCreationDateTime.CompareTo(earliestCreationDate) < 0)
+                {
+                    earliestCreationDate = processCreationDateTime;
+                    earliestProcessId = processTuple.Item1;
+                }
             }
 
-            // Find the true parent process id. Assumes that processes with the same name cannot have different parent processes
-            if (parentProcessIds[0].parentProcessId == parentProcessIds[1].parentProcessId)    // Case 1: Both proccesses have the same parent
-                parentProcess = Process.GetProcessById((int)parentProcessIds[0].parentProcessId);
-            else
-            {
-                if (parentProcessIds[0].parentProcessId == parentProcessIds[1].processId)   // Case 2: Process 1 is process 0's parent
-                    parentProcess = Process.GetProcessById((int)parentProcessIds[0].parentProcessId);
-                else
-                    parentProcess = Process.GetProcessById((int)parentProcessIds[1].parentProcessId);    // Case 3: Process 0 is process 1's parent
-            }
-            return true;
+            mainProcess = Process.GetProcessById((int)earliestProcessId);
         }
+        return mainProcess is not null;
     }
 
     /// <summary>
@@ -149,10 +157,18 @@ public class Application
     private static string GetProductName(Process? process)
     {
         if (process is null)
-            throw new ArgumentException("Expected an instance of the Process class");
+            throw new ArgumentException("Expected an instance of the Process");
         else
         {
             string defaultName = process.ProcessName;     // Use the process name as a default
+            try
+            {
+                ProcessModule? processModule = process.MainModule;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                return defaultName;
+            }
             if (process.MainModule is null)
                 return defaultName;
             else
