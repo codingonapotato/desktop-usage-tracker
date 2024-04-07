@@ -4,18 +4,29 @@ using System.Diagnostics;
 using System.Threading;
 using System.Runtime.Versioning;
 using Backend;
-using NUnit.Framework.Internal;
 
 [SupportedOSPlatform("windows")]
 public class ApplicationTests
 {
     ProcessStartInfo startInfo = new ProcessStartInfo(@"..\..\..\iperf-3.1.3-win64\iperf3.exe", "-s");
+    Process? process;
     string processName = "iperf3";
-    public void CleanUpProcessRoutine(Process process)
+
+    [SetUp]
+    public void BeforeEach()
     {
+        process = Process.Start(startInfo);
+    }
+
+    [TearDown]
+    public void CleanUpProcessRoutine()
+    {
+        if (process is null || process.HasExited) return;
+
         process.Kill();
         process.WaitForExit();
         process.Close();
+        process = null;
     }
 
     [TestFixture]
@@ -84,7 +95,6 @@ public class ApplicationTests
         [Test]
         public void ApplicationIsRunning()
         {
-            Process? process = Process.Start(startInfo);
             if (process is null)
                 Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
             else
@@ -92,9 +102,61 @@ public class ApplicationTests
                 Application applicationInstance = new Application(processName);
                 Assert.True(applicationInstance.IsApplicationRunning());
 
-                CleanUpProcessRoutine(process);
+                CleanUpProcessRoutine();
 
                 Assert.False(applicationInstance.IsApplicationRunning());
+            }
+        }
+    }
+
+    [TestFixture]
+    class SetTrackedTests : ApplicationTests
+    {
+        /// <summary>
+        /// Toggle SetTracked for an Application object instance and confirm internal object state
+        /// </summary>
+        [Test]
+        public void SetTracked()
+        {
+            if (process is null)
+                Assert.Fail(
+                    "Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
+            else
+            {
+                Application applicationInstance = new Application(processName);
+                applicationInstance.SetTracked(false);
+                Assert.False(applicationInstance.Tracked);
+                applicationInstance.SetTracked(true);
+                Assert.True(applicationInstance.Tracked);
+                Assert.True(applicationInstance.ReferenceTime.CompareTo(DateTime.Now) <= 0);
+            }
+        }
+    }
+
+    [TestFixture]
+    class ModifyCategoryTests : ApplicationTests
+    {
+        [Test]
+        public void ModifyCategory()
+        {
+            if (process is null)
+                Assert.Fail(
+                    "Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
+            else
+            {
+                Application applicationInstance = new Application(processName);
+                applicationInstance.ModifyCategory("Productivity");
+                Assert.True(applicationInstance.Category == Category.GetInstance("Productivity"));
+
+                try
+                {
+                    applicationInstance.ModifyCategory("");
+                    Assert.Fail("Expected previous line to throw ArgumentException");
+                }
+                catch (ArgumentException)
+                {
+                    Assert.True(applicationInstance.Category == Category.GetInstance("Productivity"));   // Application instance is unchanged for an invalid category
+                }
             }
         }
     }
@@ -109,7 +171,6 @@ public class ApplicationTests
         [Test]
         public void SimpleTimeElapsedForRunningApplication()
         {
-            Process? process = Process.Start(startInfo);
             if (process is null)
                 Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
             else
@@ -120,7 +181,7 @@ public class ApplicationTests
                 Thread.Sleep(1000);
                 TimeSpan secondElapsed = applicationInstance.CalculateTimeElapsed();
 
-                CleanUpProcessRoutine(process);
+                CleanUpProcessRoutine();
 
                 Assert.True(secondElapsed.CompareTo(firstElapsed) > 0);
             }
@@ -133,7 +194,6 @@ public class ApplicationTests
         [Test]
         public void SimpleTimeElapsedForExitedApplication()
         {
-            Process? process = Process.Start(startInfo);
             if (process is null)
                 Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
             else
@@ -141,7 +201,7 @@ public class ApplicationTests
                 Application applicationInstance = new Application(processName);
                 applicationInstance.SetTracked(true);
 
-                CleanUpProcessRoutine(process);
+                CleanUpProcessRoutine();
 
                 TimeSpan timeElapsedBeforeSleep = applicationInstance.CalculateTimeElapsed();
                 Thread.Sleep(1000);
@@ -157,7 +217,6 @@ public class ApplicationTests
         [Test]
         public void TimeElapsedForDynamicallyTrackedAppliation()
         {
-            Process? process = Process.Start(startInfo);
             if (process is null)
                 Assert.Fail("Expecting a running process. Perhaps the path is wrong or the process trying to be run does not exist on the local machine");
             else
@@ -174,7 +233,6 @@ public class ApplicationTests
 
                 Assert.True(timeElapsedTracked.CompareTo(timeElapsedRetracked) < 0);    // Check that time elapsed of re-tracked application is greater
 
-                CleanUpProcessRoutine(process);
             }
         }
 

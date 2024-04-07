@@ -36,6 +36,7 @@ public class Category
     /// </summary>
     /// <param name="name"></param>
     /// <returns> Category </returns>
+    /// <exception cref="ArgumentException"></exception>
     public static Category GetInstance(string name)
     {
         Category? categoryInstance;
@@ -75,6 +76,7 @@ public class Category
     /// Adds a new category if one with the same name does not already exist. Otherwise this function does nothing
     /// </summary>
     /// <param name="name"> Name of the category to add </param>
+    /// <exception cref="ArgumentException"></exception>
     public static void AddCategory(string name)
     {
         name = name.ToLower();

@@ -1,6 +1,7 @@
 namespace Backend;
 
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Management;
 using System.Runtime.Versioning;
@@ -139,7 +140,15 @@ public class Application
     /// Changes the category field for this instance to the Category instance with the specified name
     /// </summary>
     /// <remarks>
-    /// Requires: name is a valid name for a Category
+    /// Requires: name is a valid input. Valid inputs must:
+    /// <list type="number">
+    /// <item>
+    /// Be between 1 and 50 characters (inclusive) in length
+    /// </item>
+    /// <item>
+    /// Not a string with only whitespace characters
+    /// </item>
+    /// </list>
     /// </remarks>
     /// <param name="name"></param>
     /// <exception cref="ArgumentException"></exception>
