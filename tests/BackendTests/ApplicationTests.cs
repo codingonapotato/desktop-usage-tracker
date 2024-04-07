@@ -11,7 +11,7 @@ public class ApplicationTests
 {
     ProcessStartInfo startInfo = new ProcessStartInfo(@"..\..\..\iperf-3.1.3-win64\iperf3.exe", "-s");
     string processName = "iperf3";
-    public void cleanUpProcessRoutine(Process process)
+    public void CleanUpProcessRoutine(Process process)
     {
         process.Kill();
         process.WaitForExit();
@@ -92,7 +92,7 @@ public class ApplicationTests
                 Application applicationInstance = new Application(processName);
                 Assert.True(applicationInstance.IsApplicationRunning());
 
-                cleanUpProcessRoutine(process);
+                CleanUpProcessRoutine(process);
 
                 Assert.False(applicationInstance.IsApplicationRunning());
             }
@@ -120,7 +120,7 @@ public class ApplicationTests
                 Thread.Sleep(1000);
                 TimeSpan secondElapsed = applicationInstance.CalculateTimeElapsed();
 
-                cleanUpProcessRoutine(process);
+                CleanUpProcessRoutine(process);
 
                 Assert.True(secondElapsed.CompareTo(firstElapsed) > 0);
             }
@@ -141,7 +141,7 @@ public class ApplicationTests
                 Application applicationInstance = new Application(processName);
                 applicationInstance.SetTracked(true);
 
-                cleanUpProcessRoutine(process);
+                CleanUpProcessRoutine(process);
 
                 TimeSpan timeElapsedBeforeSleep = applicationInstance.CalculateTimeElapsed();
                 Thread.Sleep(1000);
@@ -174,7 +174,7 @@ public class ApplicationTests
 
                 Assert.True(timeElapsedTracked.CompareTo(timeElapsedRetracked) < 0);    // Check that time elapsed of re-tracked application is greater
 
-                cleanUpProcessRoutine(process);
+                CleanUpProcessRoutine(process);
             }
         }
 
